@@ -136,8 +136,12 @@ const segmentsToString = (segments: MergeSegment[]): string => {
 };
 
 export const mergeMultipleTexts = async (texts: string[]): Promise<MergeSegment[]> => {
-    if (texts.length === 0) return [];
-    if (texts.length === 1) return [{ type: SegmentType.CONTENT, content: texts[0] }];
+  // Enforce two-version merging only
+  if (texts.length === 0) return [];
+  if (texts.length === 1) return [{ type: SegmentType.CONTENT, content: texts[0] }];
+  if (texts.length > 2) {
+    throw new Error('Only two versions are supported.');
+  }
 
     let currentBase = texts[0];
     let currentSegments: MergeSegment[] = [];

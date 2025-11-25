@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MergeSegment, SegmentType } from '../types';
-import { Check, X, ArrowLeftRight, Copy, Eye, List, ArrowDown, ArrowUp, ScanLine } from 'lucide-react';
+import { Check, X, ArrowLeftRight, Copy, Eye, List, ArrowDown, ArrowUp, ScanLine, RotateCcw, RotateCw } from 'lucide-react';
 import { Button } from './Button';
 
 interface MergeEditorProps {
@@ -19,7 +19,10 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
     animate = false
 }) => {
   // Map of segment index to decision ('A' | 'B' | 'A+B' | 'B+A')
-  const [decisions, setDecisions] = useState<Record<number, 'A' | 'B' | 'A+B' | 'B+A'>>({});
+    const [decisions, setDecisions] = useState<Record<number, 'A' | 'B' | 'A+B' | 'B+A'>>({});
+    // Undo / Redo stacks for decisions
+    const [undoStack, setUndoStack] = useState<Record<number, 'A' | 'B' | 'A+B' | 'B+A' | undefined>[]>([]);
+    const [redoStack, setRedoStack] = useState<Record<number, 'A' | 'B' | 'A+B' | 'B+A' | undefined>[]>([]);
   const [finalText, setFinalText] = useState('');
   const [isViewingResult, setIsViewingResult] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -75,9 +78,72 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
     setFinalText(text);
   }, [segments, decisions]);
 
-  const handleDecision = (index: number, choice: 'A' | 'B' | 'A+B' | 'B+A') => {
-    setDecisions(prev => ({ ...prev, [index]: choice }));
-  };
+    const handleDecision = (index: number, choice: 'A' | 'B' | 'A+B' | 'B+A') => {
+        setDecisions(prev => {
+            // push previous state to undo stack
+            setUndoStack(u => [...u.slice(-49), { ...prev }]);
+            setRedoStack([]);
+            return { ...prev, [index]: choice };
+        });
+    };
+
+    const canUndo = undoStack.length > 0;
+    const canRedo = redoStack.length > 0;
+
+    const handleUndo = () => {
+        if (!canUndo) return;
+        const last = undoStack[undoStack.length - 1];
+        setUndoStack(u => u.slice(0, -1));
+        setRedoStack(r => [...r, { ...decisions }]);
+        setDecisions(last || {});
+    };
+
+    const handleRedo = () => {
+        if (!canRedo) return;
+        const next = redoStack[redoStack.length - 1];
+        setRedoStack(r => r.slice(0, -1));
+        setUndoStack(u => [...u, { ...decisions }]);
+        setDecisions(next || {});
+    };
+
+    // Inline/token diff helper — returns array of { text, changed }
+    const tokenizeForInline = (text: string) => {
+        if (!text) return [] as string[];
+        return text.split(/(\s+|[.,!?;:\"'()\[\]{}])/g).filter(Boolean);
+    };
+
+    const inlineDiff = (a?: string, b?: string) => {
+        const A = tokenizeForInline(a || '');
+        const B = tokenizeForInline(b || '');
+
+        // simple LCS to mark equal tokens
+        const m = A.length;
+        const n = B.length;
+        const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (A[i-1] === B[j-1]) dp[i][j] = dp[i-1][j-1] + 1;
+                else dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+            }
+        }
+
+        // walk to get matching positions
+        let i = m, j = n;
+        const matchA: boolean[] = Array(m).fill(false);
+        const matchB: boolean[] = Array(n).fill(false);
+        while (i > 0 && j > 0) {
+            if (A[i-1] === B[j-1]) {
+                matchA[i-1] = true;
+                matchB[j-1] = true;
+                i--; j--;
+            } else if (dp[i-1][j] >= dp[i][j-1]) i--; else j--;
+        }
+
+        // Build arrays describing tokens with change flag for A and B
+        const outA = A.map((t, idx) => ({ text: t, changed: !matchA[idx] }));
+        const outB = B.map((t, idx) => ({ text: t, changed: !matchB[idx] }));
+        return { outA, outB };
+    };
 
   const conflictCount = segments.filter(s => s.type === SegmentType.CONFLICT).length;
   const resolvedCount = Object.keys(decisions).length;
@@ -113,6 +179,14 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
             </div>
         </div>
         <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={handleUndo} disabled={!canUndo} title="Undo decision">
+                    <RotateCcw size={16} />
+                </Button>
+                <Button variant="ghost" onClick={handleRedo} disabled={!canRedo} title="Redo decision">
+                    <RotateCw size={16} />
+                </Button>
+            </div>
             <Button 
                 variant="ghost" 
                 onClick={() => setIsViewingResult(!isViewingResult)}
@@ -211,7 +285,14 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
                                     <span className={`text-[10px] font-bold uppercase tracking-wider truncate pr-2 font-heading ${choice === 'A' ? 'text-gray-400' : 'text-tech-light'}`} title={labelA}>{labelA}</span>
                                     {choice === 'A' && <Check size={16} className="text-white flex-shrink-0 animate-fade-in" />}
                                 </div>
-                                <p className={`text-sm whitespace-pre-wrap font-mono ${choice === 'A' ? 'text-gray-100' : 'text-tech-black'}`}>{seg.optionA}</p>
+                                <p className={`text-sm whitespace-pre-wrap font-mono ${choice === 'A' ? 'text-gray-100' : 'text-tech-black'}`}>
+                                    {(() => {
+                                        const { outA } = inlineDiff(seg.optionA, seg.optionB);
+                                        return outA.map((t, i) => (
+                                            <span key={i} className={`${t.changed ? 'bg-amber-100 text-amber-800 rounded-sm px-[2px]' : ''}`}>{t.text}</span>
+                                        ));
+                                    })()}
+                                </p>
                             </div>
 
                             {/* Option B */}
@@ -228,7 +309,14 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
                                     <span className={`text-[10px] font-bold uppercase tracking-wider truncate pr-2 font-heading ${choice === 'B' ? 'text-gray-400' : 'text-tech-light'}`} title={labelB}>{labelB}</span>
                                     {choice === 'B' && <Check size={16} className="text-white flex-shrink-0 animate-fade-in" />}
                                 </div>
-                                <p className={`text-sm whitespace-pre-wrap font-mono ${choice === 'B' ? 'text-gray-100' : 'text-tech-black'}`}>{seg.optionB}</p>
+                                <p className={`text-sm whitespace-pre-wrap font-mono ${choice === 'B' ? 'text-gray-100' : 'text-tech-black'}`}>
+                                    {(() => {
+                                        const { outB } = inlineDiff(seg.optionA, seg.optionB);
+                                        return outB.map((t, i) => (
+                                            <span key={i} className={`${t.changed ? 'bg-amber-100 text-amber-800 rounded-sm px-[2px]' : ''}`}>{t.text}</span>
+                                        ));
+                                    })()}
+                                </p>
                             </div>
                         </div>
 
