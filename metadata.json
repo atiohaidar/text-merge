@@ -1,0 +1,5 @@
+{
+  "name": "TextMerge",
+  "description": "An intelligent text merging tool that combines two versions of text, identifying additions and helping users resolve semantic conflicts using Gemini AI.",
+  "requestFramePermissions": []
+}
