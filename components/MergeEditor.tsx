@@ -14,8 +14,8 @@ interface MergeEditorProps {
 export const MergeEditor: React.FC<MergeEditorProps> = ({ 
     segments, 
     onReset, 
-    labelA = "Version 1", 
-    labelB = "Version 2",
+    labelA = "Versi 1", 
+    labelB = "Versi 2",
     animate = false
 }) => {
   // Map of segment index to decision ('A' | 'B' | 'A+B' | 'B+A')
@@ -162,57 +162,57 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
       {/* Header Toolbar */}
       <div className="flex items-center justify-between p-4 bg-white border-b border-tech-light/30 shadow-sm z-20">
         <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="secondary" onClick={onReset} icon={<ArrowLeftRight size={16} />}>
-                <span className="hidden sm:inline">New Merge</span>
-                <span className="sm:hidden">New</span>
-            </Button>
+                    <Button variant="secondary" onClick={onReset} icon={<ArrowLeftRight size={16} />}>
+                        <span className="hidden sm:inline">Merge Baru</span>
+                        <span className="sm:hidden">Baru</span>
+                    </Button>
             <div className="h-6 w-px bg-tech-light/30 mx-1 hidden sm:block"></div>
             <div className="text-sm font-medium text-tech-dim hidden sm:block font-mono">
                 {isScanning 
-                    ? <span className="text-tech-dim animate-pulse flex items-center gap-2"><ScanLine size={16}/> Scanning Differences...</span>
-                    : conflictCount === 0 
-                        ? <span className="text-emerald-600 flex items-center gap-1"><Check size={16}/> No Conflicts</span>
-                        : <span className={`${isFullyResolved ? 'text-emerald-600' : 'text-amber-600'}`}>
-                            {resolvedCount}/{conflictCount} Resolved
-                        </span>
+                            ? <span className="text-tech-dim animate-pulse flex items-center gap-2"><ScanLine size={16} /> Memindai Perbedaan...</span>
+                            : conflictCount === 0
+                                ? <span className="text-emerald-600 flex items-center gap-1"><Check size={16} /> Tidak Ada Konflik</span>
+                                : <span className={`${isFullyResolved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                    {resolvedCount}/{conflictCount} Terselesaikan
+                                </span>
                 }
             </div>
         </div>
         <div className="flex gap-2">
             <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={handleUndo} disabled={!canUndo} title="Undo decision">
+                        <Button variant="ghost" onClick={handleUndo} disabled={!canUndo} title="Urungkan keputusan">
                     <RotateCcw size={16} />
                 </Button>
-                <Button variant="ghost" onClick={handleRedo} disabled={!canRedo} title="Redo decision">
+                        <Button variant="ghost" onClick={handleRedo} disabled={!canRedo} title="Ulangi keputusan">
                     <RotateCw size={16} />
                 </Button>
             </div>
             <Button 
                 variant="ghost" 
                 onClick={() => setIsViewingResult(!isViewingResult)}
-                className={isViewingResult ? "bg-tech-black text-white hover:bg-tech-base hover:text-white" : ""}
-                title={isViewingResult ? "Back to Conflicts" : "View & Edit Result"}
+                        className={isViewingResult ? "bg-tech-black text-white hover:bg-tech-base hover:text-white" : ""}
+                        title={isViewingResult ? "Kembali ke Konflik" : "Lihat & Sunting Hasil"}
             >
                 {isViewingResult ? (
                     <>
                         <List size={18} className="mr-2" />
-                        <span className="hidden sm:inline">Conflicts</span>
+                                <span className="hidden sm:inline">Konflik</span>
                     </>
                 ) : (
                     <>
                         <Eye size={18} className="mr-2" />
-                        <span className="hidden sm:inline">View Result</span>
-                        <span className="sm:hidden">Result</span>
+                                <span className="hidden sm:inline">Lihat Hasil</span>
+                                <span className="sm:hidden">Hasil</span>
                     </>
                 )}
             </Button>
-            <Button 
+                    <Button
                 variant="primary" 
                 onClick={copyToClipboard} 
                 icon={copied ? <Check size={16} /> : <Copy size={16} />}
                 className={copied ? "bg-emerald-600 hover:bg-emerald-700 border-transparent" : ""}
             >
-                <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
+                        <span className="hidden sm:inline">{copied ? 'Tersalin!' : 'Salin'}</span>
             </Button>
         </div>
       </div>
@@ -234,13 +234,13 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
              <div className="max-w-3xl mx-auto space-y-6 pb-20">
                 {/* Mobile Status Bar */}
                 <div className="sm:hidden mb-4 p-3 bg-white rounded-lg border border-tech-light/30 shadow-sm flex justify-between items-center">
-                    <span className="text-xs font-bold font-heading text-tech-dim uppercase">Progress</span>
+                    <span className="text-xs font-bold font-heading text-tech-dim uppercase">Progres</span>
                     <span className={`text-sm font-bold font-mono ${isFullyResolved ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {isScanning ? 'Scanning...' : `${resolvedCount} of ${conflictCount} Resolved`}
+                        {isScanning ? 'Memindai...' : `${resolvedCount} dari ${conflictCount} Terselesaikan`}
                     </span>
                 </div>
 
-                {segments.length === 0 && <p className="text-center text-tech-light mt-10">No content to display.</p>}
+                {segments.length === 0 && <p className="text-center text-tech-light mt-10">Tidak ada konten untuk ditampilkan.</p>}
                 
                 {segments.map((seg, idx) => {
                   // Scanning Logic: Hide segments that haven't been "scanned" yet
@@ -402,14 +402,14 @@ export const MergeEditor: React.FC<MergeEditorProps> = ({
       {/* Floating Action Button for Mobile (View Result) */}
       {!isViewingResult && (
         <div className="md:hidden absolute bottom-6 right-6 z-30">
-            <Button 
-                variant="primary" 
-                onClick={() => setIsViewingResult(true)}
-                className="shadow-xl rounded-full px-5 py-3 h-auto"
-            >
-                <span className="mr-2">View Result</span>
-                <Eye size={18} />
-            </Button>
+                <Button 
+                    variant="primary" 
+                    onClick={() => setIsViewingResult(true)}
+                    className="shadow-xl rounded-full px-5 py-3 h-auto"
+                >
+                    <span className="mr-2">Lihat Hasil</span>
+                    <Eye size={18} />
+                </Button>
         </div>
       )}
 
